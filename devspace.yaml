@@ -1,0 +1,201 @@
+version: v1beta11
+
+vars: 
+- name: APP_NAME
+  source: env
+  default: app
+- name: IMAGE_PREFIX
+- name: IMAGE_APP
+  source: env
+  default: ${IMAGE_PREFIX}/${APP_NAME}
+- name: IMAGE_INIT
+  source: env
+  default: ${IMAGE_PREFIX}/${APP_NAME}-init
+- name: PUBLIC_ROOT
+  source: env
+  default: "/data/public"
+- name: SERVICES
+  source: env
+  default: "redis-master,postgresql"
+- name: DB_SERVICE
+  source: env
+  default: postgresql
+- name: CACHE_SERVICE
+  source: env
+  default: redis-master
+- name: DB_VERSION
+  source: env
+  default: 11.14.0-debian-10-r18
+- name: DB_DATABASE
+  source: env
+  default: ${APP_NAME}
+- name: DB_USERNAME
+  source: env
+  default: ${APP_NAME}
+- name: DB_PASSWORD
+  source: env
+  default: ${APP_NAME}
+- name: REDIS_VERSION
+  source: env
+  default: 6.2.6-debian-10-r120
+- name: REDIS_PASSWORD
+  source: env
+  password: true
+  noCache: true
+  default: ${devspace.random}
+images:
+  app-image:
+    image: ${IMAGE_APP}
+    dockerfile: ./Dockerfile
+    build:
+      buildKit:
+        inCluster:
+          name: buildKit-builder
+        skipPush: false
+        args:
+          - --platform
+          - linux/amd64
+  init-image:
+    image: ${IMAGE_INIT}
+    dockerfile: init-container/Dockerfile
+    context: init-container
+    build:
+      buildKit:
+        inCluster:
+          name: buildKit-builder
+        skipPush: false
+        args:
+          - --platform
+          - linux/amd64
+
+deployments:
+- name: k8s-init-containers
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: ${APP_NAME}
+        image: ${IMAGE_APP}
+        volumeMounts:
+        - containerPath: /data
+          volume:
+            name: ${APP_NAME}-data
+            readOnly: true
+        env:
+        - name: APP_NAME
+          value: ${APP_NAME}
+      initContainers:
+      - name: init-fetch-files
+        image: ${IMAGE_INIT}
+        command:
+        - fetchFiles.sh
+        volumeMounts:
+        - containerPath: /data
+          volume:
+            name: ${APP_NAME}-data
+            readOnly: false
+        env:
+        - name: PUBLIC_ROOT
+          value: ${PUBLIC_ROOT}
+      - name: init-check-services
+        image: ${IMAGE_INIT}
+        command:
+        - checkServices.sh
+        env:
+        - name: APP_NAME
+          value: ${APP_NAME}
+        - name: SERVICES
+          value: ${SERVICES}
+      - name: init-check-database
+        image: ${IMAGE_INIT}
+        command:
+        - checkDatabase.sh
+        env:
+        - name: APP_NAME
+          value: ${APP_NAME}
+        - name: DB_SERVICE
+          value: ${DB_SERVICE}
+        - name: DB_DATABASE
+          value: $!{DB_DATABASE}
+        - name: DB_USERNAME
+          value: $!{DB_USERNAME}
+        - name: DB_PASSWORD
+          value: $!{DB_PASSWORD}
+      - name: init-check-cache
+        image: ${IMAGE_INIT}
+        command:
+        - checkCache.sh
+        env:
+        - name: APP_NAME
+          value: $!{APP_NAME}
+        - name: CACHE_SERVICE
+          value: $!{CACHE_SERVICE}
+        - name: REDIS_PASSWORD
+          value: $!{REDIS_PASSWORD}
+        - name: REDISCLI_AUTH
+          value: $!{REDIS_PASSWORD}
+      volumes:
+      - name: ${APP_NAME}-data
+        size: "1M"
+- name: redis
+  helm:
+    componentChart: false
+    chart:
+      name: redis
+      version: 16.4.0
+      repo: https://charts.bitnami.com/bitnami
+    values:
+      image:
+        tag: $!{REDIS_VERSION}
+      architecture: standalone
+      auth:
+        enabled: true
+        password: $!{REDIS_PASSWORD}
+      networkPolicy:
+        enabled: true
+        allowExternal: true
+- name: postgresql
+  helm:
+    componentChart: false
+    chart:
+      name: postgresql
+      version: 10.4.3
+      repo: https://charts.bitnami.com/bitnami
+    values:
+      image:
+        tag: $!{DB_VERSION}
+      postgresqlDatabase: $!{DB_DATABASE}
+      postgresqlUsername: $!{DB_USERNAME}
+      postgresqlPassword: $!{DB_PASSWORD}
+commands:
+- name: test
+  command: devspace purge; devspace dev; devspace purge
+- name: cleanup
+  command: devspace cleanup images; devspace purge
+dev:
+  autoReload:
+    paths:
+    - init-comtrainer/*
+    - main.go
+    - go.mod
+    - devspace.yaml
+    images:
+    - app-image
+    - init-image
+    deployments:
+    - k8s-init-containers
+    - redis
+    - postgresql
+  logs:                               
+    disabled: true
+    showLast: 200
+    sync: false
+    selectors:
+    - labelSelector:
+        app.kubernetes.io/name: devspace-${APP_NAME}
+    - labelSelector:
+        app.kubernetes.io/name: postgresql
+    - labelSelector:
+        app.kubernetes.io/name: redis
+    - imageSelector: ${IMAGE_APP}
+    - imageSelector: ${IMAGE_INIT}

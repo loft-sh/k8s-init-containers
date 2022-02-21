@@ -1,0 +1,10 @@
+Dockerfile
+**/Dockerfile
+.git
+.devspace
+.env
+.env.example
+.gitignore
+LICENSE
+README.md
+k8s-init-containers
