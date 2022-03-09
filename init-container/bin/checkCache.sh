@@ -4,7 +4,7 @@ TRACE=${TRACE:-""}
 DEBUG=${DEBUG:-""}
 [ -n "$TRACE" ] || [ -n "$DEBUG" ] && set -x
 IFS=$'\n\t;, '
-log () { echo "$0($$)$(date +"%Y%m%d-%T") : $1"; }
+log () { echo "$(basename "$0")($$)$(date +"%Y%m%d-%T") : $1"; }
 log "Started"
 
 # Make sure REDISCLI_AUTH environment value is set.
@@ -26,7 +26,7 @@ while ! checkRedis; do
     sleep 1
 done
 log "Successfuly connected to (${CACHE_SERVICE}.${NAMESPACE}), cache is ready."
-log "Ended"
+log "Finished"
 exit 0
 
 

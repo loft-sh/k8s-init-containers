@@ -4,7 +4,7 @@ TRACE=${TRACE:-""}
 DEBUG=${DEBUG:-""}
 [ -n "$TRACE" ] || [ -n "$DEBUG" ] && set -x
 IFS=$'\n\t;, '
-log () { echo "$0($$)$(date +"%Y%m%d-%T") : $1"; }
+log () { echo "$(basename "$0")($$)$(date +"%Y%m%d-%T") : $1"; }
 log "Started"
 
 # If "PUBLIC_ROOT" environment value is not set or empty, apply default
@@ -34,5 +34,5 @@ else
 	log "Couldn't fetch files."
 	exit 1
 fi
-log "Ended"
+log "Finished"
 exit 0

@@ -21,3 +21,4 @@ k8s-init-containers
 
 # Ignore local environment values
 .env
+.envrc

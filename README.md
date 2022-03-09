@@ -1,12 +1,13 @@
 
 # Kubernetes Init Containers
 
-This is a complementary code repository to be used with [Loft Kubernetes Init Containers Blog Post](https://loft.sh/blog/kubernetes-init-containers/) aims to explore features, motivation and implementation of Kubernetes init containers.
+This is a complementary code repository to be used with [Loft Kubernetes Init Containers Blog Post](https://loft.sh/blog/kubernetes-init-containers/) and aims to explore motivation, features and, implementation of Kubernetes init containers.
+
 Here we have an example application written in Go, which includes several init containers.
 
 ## Requirements
 
-The project has several tool and infrastructure requriements.
+The project has several tool and infrastructure requirements.
 
 ### Tools
 
@@ -14,7 +15,7 @@ The project has several tool and infrastructure requriements.
 - Kubectl - ([Installation Documentation](https://kubernetes.io/docs/tasks/tools/#kubectl))
 - Helm - ([Installing Helm](https://helm.sh/docs/intro/install/))
 
->**_Note:_** If you are using [`asdf`](https://asdf-vm.com/) tool, then you only need to run `asdf install` in the working directory.
+>**_Note:_** If you are using [`asdf`](https://asdf-vm.com/) tool, then you only need to run `asdf install` in the working directory, `asdf` will install neccessary components.
 
 ### Infrastructure
 
@@ -24,7 +25,7 @@ If you don't have a cluster at hand, you can use Kind to create one.
 
 - Kind ([Kind>User Guide>Quick Start](https://kind.sigs.k8s.io/docs/user/quick-start/))
 
-## Setting KubeContext and NameSpace
+## Setting Kubecontext and Namespace
 
 ```shell
 devspace use context                  

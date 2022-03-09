@@ -4,7 +4,7 @@ TRACE=${TRACE:-""}
 DEBUG=${DEBUG:-""}
 [ -n "$TRACE" ] || [ -n "$DEBUG" ] && set -x
 IFS=$'\n\t;, '
-log () { echo "$0($$)$(date +"%Y%m%d-%T") : $1"; }
+log () { echo "$(basename "$0")($$)$(date +"%Y%m%d-%T") : $1"; }
 log "Started"
 
 # If "SERVICES" environment value is not set or empty, apply default set
@@ -25,7 +25,7 @@ while ! checkPostgresql; do
     sleep 1
 done
 log "Successfuly connected to (${DB_SERVICE}.${NAMESPACE}), database is ready."
-log "Ended"
+log "Finished"
 exit 0
 
 

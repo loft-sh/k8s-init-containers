@@ -100,7 +100,40 @@ deployments:
       - name: init-check-services
         image: ${IMAGE_INIT}
         command:
-        - checkServices.sh
+        - "/usr/bin/env"
+        args:
+        - "bash"
+        - "-c"
+        - |
+            set -eo pipefail
+            [ -n "$TRACE" ] || [ -n "$DEBUG" ] && set -x
+            IFS=$'\n\t;, '
+            log () { echo "checkServices.sh-inline($$)$(date +"%Y%m%d-%T") : $1"; }
+            log "Started"
+            # call exit with a status code of 1 to simulate a failure in the init container.
+            # default commented out.
+            exit 1
+
+            # If "APP_NAME" environment value is not set or empty, apply default
+            if [ -z "$APP_NAME" ]; then
+              APP_NAME="app"
+            fi
+            # If "SERVICES" environment value is not set or empty, apply default set
+            if [ -z "$SERVICES" ]; then
+              SERVICES="$APP_NAME-redis,$APP_NAME-postgresql"
+            fi
+            # Fetch the namespace
+            NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+            # Check if we can resolve all K8s service IPs
+            for service in $SERVICES; do
+                while ! nslookup "$service.$NAMESPACE.svc.cluster.local" >/dev/null 2>&1; do
+                    log "Can't resolve ($service.$NAMESPACE) in DNS, service is not ready yet(or there is no end points yet)." >&2
+                    sleep 1
+                done
+                log "Successfuly resolved ($service.$NAMESPACE) in DNS."
+            done
+            log "Ended"
+            exit 0
         env:
         - name: APP_NAME
           value: ${APP_NAME}
@@ -172,10 +205,16 @@ commands:
   command: devspace purge; devspace dev; devspace purge
 - name: cleanup
   command: devspace cleanup images; devspace purge
+- name: init-logs
+  command: |
+    devspace logs -f -c init-fetch-files;
+    devspace logs -f -c init-check-services;
+    devspace logs -f -c init-check-database;
+    devspace logs -f -c init-check-cache;
 dev:
   autoReload:
     paths:
-    - init-comtrainer/*
+    - init-contrainer/*
     - main.go
     - go.mod
     - devspace.yaml
@@ -186,7 +225,7 @@ dev:
     - k8s-init-containers
     - redis
     - postgresql
-  logs:                               
+  logs:               
     disabled: true
     showLast: 200
     sync: false
